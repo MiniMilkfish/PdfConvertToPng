@@ -1,0 +1,122 @@
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF Convert To PNG</title>
+
+    <!-- Lib -->
+    <!-- pdf -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/web/pdf_viewer.min.css">
+
+    <!-- jquery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+
+    <style>
+        #pdfUrl {
+            width: 500px;
+        }
+
+        #error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <h2>PDF Convert To PNG</h2>
+        <h4>local sample file: ./000000_20230412_0A_CN_0.pdf</h4>
+        <input id="pdfUrl" value="./000000_20230412_0A_CN_0.pdf" />
+        <button id="clear">Clear</button>
+        <button id="reset">Reset</button>
+        <button id="download">Convert</button>
+        <h4 id="error"></h4>
+        <h4 id="message"></h4>
+    </div>
+    <script>
+        $(function () {
+            // click event
+            $("#clear").on('click', () => {
+                $("#pdfUrl").val('');
+                resetTips();
+            });
+            $("#reset").on('click', () => {
+                $("#pdfUrl").val('./000000_20230412_0A_CN_0.pdf');
+                resetTips();
+            });
+            $("#download").on('click', () => {
+                let pdfUrl = $("#pdfUrl").val().trim();
+                if (pdfUrl.length === 0) return $("#pdfUrl").focus();
+
+                $('#message').html('Converting……');
+                pdfConvertToPng(pdfUrl);
+            });
+
+            /**
+             * main
+             * @param {string} pdfUrl url Or base64Str
+            */
+            const pdfConvertToPng = (pdfUrl) => {
+                pdfjsLib.workerSrc = "pdf.worker.js";
+                let loadingTask = pdfjsLib.getDocument({
+                    url: pdfUrl,
+                    useWorkerFetch: false,
+                    cMapUrl: './cmaps/',
+                    cMapPacked: true,
+                    standardFontDataUrl: './standard_fonts'
+                });
+                loadingTask.promise.then(function (pdf) {
+                    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+                        pdf.getPage(pageNumber).then((res) => {
+                            let viewport = res.getViewport({
+                                scale: 1,
+                                rotation: 0,
+                                offsetX: 0,
+                                offsetY: 0,
+                                dontFlip: false,
+                            });
+                            let canvas = document.createElement("canvas");
+                            let context = canvas.getContext("2d");
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            let renderTask = res.render({
+                                canvasContext: context,
+                                viewport: viewport,
+                            });
+                            renderTask.promise.then(() => {
+                                let canvasStr = canvas.toDataURL(),
+                                    fileName = pdfUrl.split('/').pop() + '_' + pageNumber + '.png';
+                                downland(canvasStr, fileName);
+                            });
+                        });
+                    }
+                }).catch(err => $('#error').html(err.message)).finally(() => $('#message').html('End'));
+            };
+
+            const downland = (pdfUrl, fileName) => {
+                let downloadLink = document.createElement('a');
+                let body = document.querySelector('body');
+
+                downloadLink.href = pdfUrl;
+                downloadLink.download = fileName;
+
+                downloadLink.style.display = 'none';
+                body.appendChild(downloadLink);
+
+                downloadLink.click();
+
+                //destroy
+                body.removeChild(downloadLink);
+                window.URL.revokeObjectURL(downloadLink.href);
+            };
+
+            const resetTips = () => {
+                $('#error').html('');
+                $('#message').html('');
+            }
+        });
+    </script>
+</body>
+
+</html>
