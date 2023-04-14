@@ -53,6 +53,8 @@
                 pdfConvertToPng(pdfUrl);
             });
 
+            const picRatio = 3;
+
             /**
              * main
              * @param {string} pdfUrl url Or base64Str
@@ -78,14 +80,20 @@
                             });
                             let canvas = document.createElement("canvas");
                             let context = canvas.getContext("2d");
-                            canvas.height = viewport.height;
-                            canvas.width = viewport.width;
+
+                            canvas.height = viewport.height * picRatio;
+                            canvas.width = viewport.width * picRatio;
+                            context.fillStyle = '#fff';
+                            context.rect(0, 0, canvas.width, canvas.height);
+                            context.scale(picRatio, picRatio);
+                            context.fill();
+
                             let renderTask = res.render({
                                 canvasContext: context,
                                 viewport: viewport,
                             });
                             renderTask.promise.then(() => {
-                                let canvasStr = canvas.toDataURL(),
+                                let canvasStr = canvas.toDataURL('image/png', 1),
                                     fileName = pdfUrl.split('/').pop() + '_' + pageNumber + '.png';
                                 downland(canvasStr, fileName);
                             });
